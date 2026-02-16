@@ -14,6 +14,9 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v2
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -45,9 +48,6 @@ jobs:
 
       - name: Install cargo-lambda
         run: pip install cargo-lambda
-
-      - name: Setup SAM CLI
-        uses: aws-actions/setup-sam@v2
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

@@ -1,60 +1,33 @@
-.idea
+# IDE
 .idea/
-.idea/*.*
+.vscode/
 *.iml
-.settings
-.project
-.classpath
-.vscode
-/.groovy/*
-*.orig
-test-output/
 
-##################################################################################
-# https://github.com/github/gitignore/blob/master/Global/MicrosoftOffice.gitignore
-*.tmp
+# AWS SAM
+.aws-sam/
 
-# Word temporary
-~$*.doc*
-
-# Excel temporary
-~$*.xls*
-
-# Excel Backup File
-*.xlk
-
-# PowerPoint temporary
-~$*.ppt*
-
-# Visio autosave temporary files
-*.~vsd*
-
-################################################################
-# https://github.com/github/gitignore/blob/master/Java.gitignore
-
-# Compiled class file
+# Java
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
-*.war
-*.ear
-*.tar.gz
-*.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
 **/target/
-platform/logs/
 
+# .NET
+**/bin/
+**/obj/
 
-config-files-list.txt
+# Node.js
+node_modules/
+
+# Rust
+rust-lambda/target/
+
+# Go
+go-lambda/bootstrap
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+*.tmp
