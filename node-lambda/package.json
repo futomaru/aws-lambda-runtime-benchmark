@@ -1,0 +1,12 @@
+{
+  "name": "node-lambda",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Node.js Lambda benchmark function",
+  "author": "Aleksandr Filichkin",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.700.0",
+    "@aws-sdk/lib-dynamodb": "^3.700.0"
+  }
+}

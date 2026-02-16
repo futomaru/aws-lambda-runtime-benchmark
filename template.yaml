@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Lambda Runtime Benchmark (ARM64 / Graviton)
+
+Globals:
+  Function:
+    MemorySize: 256
+    Timeout: 15
+    Architectures:
+      - arm64
+    Tracing: Active
+
+Resources:
+  PythonFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: python-lambda/
+      Handler: lambda.create
+      Runtime: python3.14
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BooksTable
+      Events:
+        CreateBook:
+          Type: Api
+          Properties:
+            Path: /python/book
+            Method: post
+
+  NodeJsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: node-lambda/
+      Handler: lambda.create
+      Runtime: nodejs24.x
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BooksTable
+      Events:
+        CreateBook:
+          Type: Api
+          Properties:
+            Path: /node/book
+            Method: post
+
+  RubyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ruby-lambda/
+      Handler: app.create
+      Runtime: ruby3.4
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BooksTable
+      Events:
+        CreateBook:
+          Type: Api
+          Properties:
+            Path: /ruby/book
+            Method: post
+
+  JavaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: java-lambda/
+      Handler: com.filichkin.blog.lambda.handler.BookHandler::handleRequest
+      Runtime: java25
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BooksTable
+      Events:
+        CreateBook:
+          Type: Api
+          Properties:
+            Path: /java/book
+            Method: post
+
+  DotNetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dotnet-lambda/src/DotNetFunction/
+      Handler: DotNetFunction::DotNetFunction.Function::FunctionHandler
+      Runtime: dotnet10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BooksTable
+      Events:
+        CreateBook:
+          Type: Api
+          Properties:
+            Path: /dotnet/book
+            Method: post
+
+  GoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: go-lambda/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BooksTable
+      Events:
+        CreateBook:
+          Type: Api
+          Properties:
+            Path: /go/book
+            Method: post
+    Metadata:
+      BuildMethod: makefile
+
+  RustFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: rust-lambda/
+      Handler: bootstrap
+      Runtime: provided.al2023
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BooksTable
+      Events:
+        CreateBook:
+          Type: Api
+          Properties:
+            Path: /rust/book
+            Method: post
+    Metadata:
+      BuildMethod: makefile
+
+  BooksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: book
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+    Export:
+      Name: LambdaBenchmarkApi
