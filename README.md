@@ -19,7 +19,7 @@ AWS Lambda の各ランタイムのパフォーマンス（特にコールドス
 | Ruby | 3.4 | ruby3.4 |
 | Java | 25 | java25 |
 | .NET | 10 | dotnet10 |
-| Go | 1.23 | provided.al2023 |
+| Go | 1.26 | provided.al2023 |
 | Rust | latest | provided.al2023 |
 
 ## ビルド・デプロイ
