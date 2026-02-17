@@ -22,12 +22,18 @@ AWS Lambda の各ランタイムのパフォーマンス（特にコールドス
 | Go | 1.26 | provided.al2023 |
 | Rust | latest | provided.al2023 |
 
+## ベンチマーク結果
+
+![Benchmark Results](benchmark_results.png)
+
+*CI/CD パイプラインで自動更新*
+
 ## ビルド・デプロイ
 
 前提: AWS SAM CLI、AWS アカウント、S3 バケット `aws-lambda-runtime-benchmark`
 
 ```bash
-./build.sh    # sam build → sam deploy を一括実行
+./scripts/build.sh    # sam build → sam deploy を一括実行
 ```
 
 GitHub Actions (`.github/workflows/deploy.yaml`) による CI/CD も利用可能。
@@ -35,5 +41,5 @@ GitHub Actions (`.github/workflows/deploy.yaml`) による CI/CD も利用可能
 ## テスト
 
 ```bash
-./test.sh     # 全ランタイムに curl でリクエストし応答時間を計測
+./scripts/test.sh     # 全ランタイムに curl でリクエストし応答時間を計測
 ```
