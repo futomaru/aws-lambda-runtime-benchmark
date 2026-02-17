@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-02-17T02:01:11.008505+00:00",
+  "results": {
+    "Python": {
+      "init_duration_ms": 500.8,
+      "invocation_duration_ms": 148.9
+    },
+    "Node.js": {
+      "init_duration_ms": 523.8,
+      "invocation_duration_ms": 564.9
+    },
+    "Ruby": {
+      "init_duration_ms": 680.6,
+      "invocation_duration_ms": 172.8
+    },
+    "Java": {
+      "init_duration_ms": 1687.7,
+      "invocation_duration_ms": 5544.9
+    },
+    ".NET": {
+      "init_duration_ms": 316.4,
+      "invocation_duration_ms": 4862.8
+    },
+    "Go": {
+      "init_duration_ms": 57.5,
+      "invocation_duration_ms": 492.2
+    },
+    "Rust": {
+      "init_duration_ms": 117.7,
+      "invocation_duration_ms": 423.9
+    }
+  }
+}
