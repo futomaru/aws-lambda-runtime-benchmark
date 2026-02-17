@@ -33,6 +33,11 @@ jobs:
           distribution: 'corretto'
           java-version: '25'
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
