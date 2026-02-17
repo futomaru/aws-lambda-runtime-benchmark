@@ -98,26 +98,29 @@ def generate_chart(results):
         ),
     )
 
-    labels = sorted_runtimes
     init_durations = [results[r]["init_duration_ms"] for r in sorted_runtimes]
     invocation_durations = [results[r]["invocation_duration_ms"] for r in sorted_runtimes]
+    totals = [i + v for i, v in zip(init_durations, invocation_durations)]
+    max_total = max(totals)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(12, 6))
 
     # 2色積み上げ: Init → Invocation
     bars_init = ax.barh(
-        labels, init_durations,
+        sorted_runtimes, init_durations,
         label="Init Duration (Cold Start)", color="#e74c3c",
     )
     bars_invoc = ax.barh(
-        labels, invocation_durations,
+        sorted_runtimes, invocation_durations,
         left=init_durations,
         label="Invocation Duration", color="#3498db",
     )
 
-    # バー内に ms 値を表示（幅が狭すぎる場合はスキップ）
+    # バー内テキスト: 全体の10%以上の幅があるバーのみ表示
+    min_bar_width = max_total * 0.10
+
     for bar, val in zip(bars_init, init_durations):
-        if val > 20:
+        if val >= min_bar_width:
             ax.text(
                 bar.get_width() / 2, bar.get_y() + bar.get_height() / 2,
                 f"{val:.0f}ms", ha="center", va="center",
@@ -125,20 +128,28 @@ def generate_chart(results):
             )
 
     for bar, val, left in zip(bars_invoc, invocation_durations, init_durations):
-        if val > 20:
+        if val >= min_bar_width:
             ax.text(
                 left + val / 2, bar.get_y() + bar.get_height() / 2,
                 f"{val:.0f}ms", ha="center", va="center",
                 fontsize=9, color="white", fontweight="bold",
             )
 
-    # バー右端に合計値を表示
-    for i, r in enumerate(sorted_runtimes):
-        total = results[r]["init_duration_ms"] + results[r]["invocation_duration_ms"]
+    # バー右端にラベル表示: 内訳が見えないバーがあれば "(init + invocation)" 形式で補足
+    for i, (r, init, invoc, total) in enumerate(
+        zip(sorted_runtimes, init_durations, invocation_durations, totals)
+    ):
+        if init < min_bar_width or invoc < min_bar_width:
+            label = f"{total:.0f}ms ({init:.0f} + {invoc:.0f})"
+        else:
+            label = f"{total:.0f}ms"
         ax.text(
-            total + 5, i, f"{total:.0f}ms",
+            total + max_total * 0.015, i, label,
             ha="left", va="center", fontsize=9, fontweight="bold",
         )
+
+    # 右端のラベルが切れないよう余白を確保
+    ax.set_xlim(right=max_total * 1.25)
 
     today = datetime.now().strftime("%Y-%m-%d")
     ax.set_title(f"AWS Lambda Cold Start Benchmark ({today})", fontsize=14, fontweight="bold")
