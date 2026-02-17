@@ -48,6 +48,7 @@ def get_cloudwatch_metrics(function_names):
 
     report_re = re.compile(
         r"Duration:\s+(?P<duration>[\d.]+)\s+ms.*"
+        r"Max Memory Used:\s+(?P<max_memory>\d+)\s+MB.*"
         r"Init Duration:\s+(?P<init>[\d.]+)\s+ms"
     )
 
@@ -81,8 +82,9 @@ def get_cloudwatch_metrics(function_names):
         results[label] = {
             "init_duration_ms": round(float(m.group("init")), 1),
             "invocation_duration_ms": round(float(m.group("duration")), 1),
+            "max_memory_used_mb": int(m.group("max_memory")),
         }
-        print(f"  {label}: Init={m.group('init')}ms, Duration={m.group('duration')}ms")
+        print(f"  {label}: Init={m.group('init')}ms, Duration={m.group('duration')}ms, Memory={m.group('max_memory')}MB")
 
     return results
 
@@ -164,6 +166,52 @@ def generate_chart(results):
     print(f"Chart saved: {chart_path}")
 
 
+def generate_memory_chart(results):
+    """横棒グラフを生成して benchmark_memory.png に保存する。"""
+    MEMORY_SIZE_MB = 256
+
+    # メモリ使用量の昇順（少ない順が上）でソート
+    sorted_runtimes = sorted(
+        results.keys(),
+        key=lambda r: results[r]["max_memory_used_mb"],
+    )
+
+    memory_values = [results[r]["max_memory_used_mb"] for r in sorted_runtimes]
+    max_memory = max(memory_values)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    bars = ax.barh(sorted_runtimes, memory_values, color="#2ecc71")
+
+    # バーの右端にラベル表示
+    for bar, val in zip(bars, memory_values):
+        ax.text(
+            val + max(max_memory, MEMORY_SIZE_MB) * 0.015,
+            bar.get_y() + bar.get_height() / 2,
+            f"{val} MB", ha="left", va="center",
+            fontsize=9, fontweight="bold",
+        )
+
+    # 設定上限の256MBを赤の点線で表示
+    ax.axvline(x=MEMORY_SIZE_MB, color="red", linestyle="--", linewidth=1.5,
+               label=f"Memory Size ({MEMORY_SIZE_MB} MB)")
+
+    # 右端のラベルが切れないよう余白を確保
+    ax.set_xlim(right=max(max_memory, MEMORY_SIZE_MB) * 1.25)
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    ax.set_title(f"AWS Lambda Max Memory Used ({today})", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Memory (MB)")
+    ax.legend(loc="lower right")
+    ax.grid(axis="x", alpha=0.3)
+
+    plt.tight_layout()
+    chart_path = PROJECT_ROOT / "images" / "benchmark_memory.png"
+    plt.savefig(chart_path, dpi=150)
+    plt.close()
+    print(f"Memory chart saved: {chart_path}")
+
+
 def main():
     print("Lambda 関数名を取得中...")
     function_names = get_function_names()
@@ -190,6 +238,7 @@ def main():
     # グラフ生成
     print("グラフを生成中...")
     generate_chart(results)
+    generate_memory_chart(results)
 
 
 if __name__ == "__main__":

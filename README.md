@@ -1,19 +1,20 @@
 # AWS Lambda Runtime Benchmark
+[日本語](README_JP.md)
 
-AWS Lambda の各ランタイムのパフォーマンス（特にコールドスタート）を比較するベンチマークプロジェクト。
+A benchmark project comparing the performance (especially cold starts) of various AWS Lambda runtimes.
 
-全ランタイムで同一処理（DynamoDB への書き込み）を ARM64 / 256MB の統一条件で実行し、応答時間を計測する。
+All runtimes execute the same workload (writing to DynamoDB) under identical conditions: ARM64 architecture with 256MB of memory, measuring response times.
 
-## アーキテクチャ
+## Architecture
 
 ```
-クライアント → API Gateway → Lambda (各ランタイム) → DynamoDB
+Client → API Gateway → Lambda (each runtime) → DynamoDB
 ```
 
-## 対象ランタイム
+## Target Runtimes
 
-| 言語 | バージョン | SAM Runtime |
-|------|-----------|-------------|
+| Language | Version | SAM Runtime |
+|----------|---------|-------------|
 | Python | 3.14 | python3.14 |
 | Node.js | 24.x | nodejs24.x |
 | Ruby | 3.4 | ruby3.4 |
@@ -22,24 +23,25 @@ AWS Lambda の各ランタイムのパフォーマンス（特にコールドス
 | Go | 1.26 | provided.al2023 |
 | Rust | latest | provided.al2023 |
 
-## ベンチマーク結果
+## Benchmark Results
 
 ![Benchmark Results](images/benchmark_results.png)
+![Memory Usage](images/benchmark_memory.png)
 
-*CI/CD パイプラインで自動更新*
+*Automatically updated via CI/CD pipeline*
 
-## ビルド・デプロイ
+## Build & Deploy
 
-前提: AWS SAM CLI、AWS アカウント、S3 バケット `aws-lambda-runtime-benchmark`
+Prerequisites: AWS SAM CLI, an AWS account, and an S3 bucket named `aws-lambda-runtime-benchmark`
 
 ```bash
-./scripts/build.sh    # sam build → sam deploy を一括実行
+./scripts/build.sh    # Runs sam build → sam deploy in one step
 ```
 
-GitHub Actions (`.github/workflows/deploy.yaml`) による CI/CD も利用可能。
+CI/CD is also available via GitHub Actions (`.github/workflows/deploy.yaml`).
 
-## テスト
+## Test
 
 ```bash
-./scripts/test.sh     # 全ランタイムに curl でリクエストし応答時間を計測
+./scripts/test.sh     # Sends curl requests to all runtimes and measures response times
 ```

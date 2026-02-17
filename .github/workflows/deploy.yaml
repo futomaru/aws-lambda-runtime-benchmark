@@ -83,6 +83,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add images/benchmark_results.png scripts/benchmark_results.json
+          git add images/benchmark_results.png images/benchmark_memory.png scripts/benchmark_results.json
           git diff --cached --quiet || git commit -m "Update benchmark results"
           git push
