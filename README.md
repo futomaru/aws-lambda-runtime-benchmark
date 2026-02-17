@@ -24,7 +24,7 @@ AWS Lambda の各ランタイムのパフォーマンス（特にコールドス
 
 ## ベンチマーク結果
 
-![Benchmark Results](benchmark_results.png)
+![Benchmark Results](images/benchmark_results.png)
 
 *CI/CD パイプラインで自動更新*
 
