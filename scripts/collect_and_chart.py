@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Collect X-Ray metrics and generate benchmark chart."""
+"""Collect CloudWatch Logs metrics and generate benchmark chart."""
 
 import json
+import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import boto3
 import matplotlib
@@ -10,6 +12,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 STACK_NAME = "aws-lambda-runtime-benchmark"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # template.yaml の論理ID → グラフ表示ラベル
 RUNTIMES = {
@@ -37,61 +40,49 @@ def get_function_names():
     return function_names
 
 
-def get_xray_metrics(function_names):
-    """X-Ray トレースから Init Duration, Invocation Duration, Overhead を取得する。"""
-    xray = boto3.client("xray")
-    end_time = datetime.now(timezone.utc)
-    start_time = end_time - timedelta(minutes=10)
+def get_cloudwatch_metrics(function_names):
+    """CloudWatch Logs の REPORT 行から Init Duration と Duration を取得する。"""
+    logs = boto3.client("logs")
+    end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
+    start_time = end_time - 10 * 60 * 1000  # 過去10分間
+
+    report_re = re.compile(
+        r"Duration:\s+(?P<duration>[\d.]+)\s+ms.*"
+        r"Init Duration:\s+(?P<init>[\d.]+)\s+ms"
+    )
 
     results = {}
     for label, func_name in function_names.items():
-        filter_expr = f'service("{func_name}")'
-        summaries = []
-        paginator = xray.get_paginator("get_trace_summaries")
-        for page in paginator.paginate(
-            StartTime=start_time,
-            EndTime=end_time,
-            FilterExpression=filter_expr,
-        ):
-            summaries.extend(page.get("TraceSummaries", []))
-
-        if not summaries:
-            print(f"  WARN: {label} ({func_name}) のトレースが見つかりません")
+        log_group = f"/aws/lambda/{func_name}"
+        try:
+            resp = logs.filter_log_events(
+                logGroupName=log_group,
+                startTime=start_time,
+                endTime=end_time,
+                filterPattern="REPORT Init Duration",
+                limit=1,
+            )
+        except logs.exceptions.ResourceNotFoundException:
+            print(f"  WARN: {label} ロググループが見つかりません: {log_group}")
             continue
 
-        # 最新のトレースを1件取得
-        summaries.sort(key=lambda s: s.get("ResponseTime", 0), reverse=True)
-        trace_ids = [s["Id"] for s in summaries[:1]]
+        events = resp.get("events", [])
+        if not events:
+            print(f"  WARN: {label} ({func_name}) の REPORT 行が見つかりません")
+            continue
 
-        traces_resp = xray.batch_get_traces(TraceIds=trace_ids)
+        # 最新のイベントを使用
+        message = events[-1]["message"]
+        m = report_re.search(message)
+        if not m:
+            print(f"  WARN: {label} REPORT 行のパースに失敗: {message}")
+            continue
 
-        for trace in traces_resp.get("Traces", []):
-            for segment in trace.get("Segments", []):
-                doc = json.loads(segment["Document"])
-
-                # AWS::Lambda セグメント（Lambda サービス側）に Init/Invocation がある
-                if doc.get("origin") != "AWS::Lambda":
-                    continue
-
-                init_duration = 0.0
-                invocation_duration = 0.0
-                overhead_duration = 0.0
-
-                for subseg in doc.get("subsegments", []):
-                    duration = (subseg["end_time"] - subseg["start_time"]) * 1000
-                    if subseg.get("name") == "Initialization":
-                        init_duration = duration
-                    elif subseg.get("name") == "Invocation":
-                        invocation_duration = duration
-                    elif subseg.get("name") == "Overhead":
-                        overhead_duration = duration
-
-                results[label] = {
-                    "init_duration_ms": round(init_duration, 1),
-                    "invocation_duration_ms": round(invocation_duration, 1),
-                    "overhead_duration_ms": round(overhead_duration, 1),
-                }
-                break
+        results[label] = {
+            "init_duration_ms": round(float(m.group("init")), 1),
+            "invocation_duration_ms": round(float(m.group("duration")), 1),
+        }
+        print(f"  {label}: Init={m.group('init')}ms, Duration={m.group('duration')}ms")
 
     return results
 
@@ -104,33 +95,24 @@ def generate_chart(results):
         key=lambda r: (
             results[r]["init_duration_ms"]
             + results[r]["invocation_duration_ms"]
-            + results[r]["overhead_duration_ms"]
         ),
     )
 
     labels = sorted_runtimes
     init_durations = [results[r]["init_duration_ms"] for r in sorted_runtimes]
     invocation_durations = [results[r]["invocation_duration_ms"] for r in sorted_runtimes]
-    overhead_durations = [results[r]["overhead_duration_ms"] for r in sorted_runtimes]
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    # 3色積み上げ: Init → Invocation → Overhead
+    # 2色積み上げ: Init → Invocation
     bars_init = ax.barh(
         labels, init_durations,
         label="Init Duration (Cold Start)", color="#e74c3c",
     )
-    left_after_init = init_durations
     bars_invoc = ax.barh(
         labels, invocation_durations,
-        left=left_after_init,
+        left=init_durations,
         label="Invocation Duration", color="#3498db",
-    )
-    left_after_invoc = [a + b for a, b in zip(init_durations, invocation_durations)]
-    bars_overhead = ax.barh(
-        labels, overhead_durations,
-        left=left_after_invoc,
-        label="Overhead", color="#95a5a6",
     )
 
     # バー内に ms 値を表示（幅が狭すぎる場合はスキップ）
@@ -142,15 +124,7 @@ def generate_chart(results):
                 fontsize=9, color="white", fontweight="bold",
             )
 
-    for bar, val, left in zip(bars_invoc, invocation_durations, left_after_init):
-        if val > 20:
-            ax.text(
-                left + val / 2, bar.get_y() + bar.get_height() / 2,
-                f"{val:.0f}ms", ha="center", va="center",
-                fontsize=9, color="white", fontweight="bold",
-            )
-
-    for bar, val, left in zip(bars_overhead, overhead_durations, left_after_invoc):
+    for bar, val, left in zip(bars_invoc, invocation_durations, init_durations):
         if val > 20:
             ax.text(
                 left + val / 2, bar.get_y() + bar.get_height() / 2,
@@ -160,11 +134,7 @@ def generate_chart(results):
 
     # バー右端に合計値を表示
     for i, r in enumerate(sorted_runtimes):
-        total = (
-            results[r]["init_duration_ms"]
-            + results[r]["invocation_duration_ms"]
-            + results[r]["overhead_duration_ms"]
-        )
+        total = results[r]["init_duration_ms"] + results[r]["invocation_duration_ms"]
         ax.text(
             total + 5, i, f"{total:.0f}ms",
             ha="left", va="center", fontsize=9, fontweight="bold",
@@ -177,9 +147,10 @@ def generate_chart(results):
     ax.grid(axis="x", alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig("benchmark_results.png", dpi=150)
+    chart_path = PROJECT_ROOT / "images" / "benchmark_results.png"
+    plt.savefig(chart_path, dpi=150)
     plt.close()
-    print("Chart saved: benchmark_results.png")
+    print(f"Chart saved: {chart_path}")
 
 
 def main():
@@ -188,8 +159,8 @@ def main():
     for label, name in function_names.items():
         print(f"  {label}: {name}")
 
-    print("X-Ray メトリクスを収集中...")
-    results = get_xray_metrics(function_names)
+    print("CloudWatch Logs からメトリクスを収集中...")
+    results = get_cloudwatch_metrics(function_names)
 
     if not results:
         print("ERROR: どのランタイムのトレースも取得できませんでした。")
@@ -200,9 +171,10 @@ def main():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": results,
     }
-    with open("benchmark_results.json", "w") as f:
+    json_path = PROJECT_ROOT / "scripts" / "benchmark_results.json"
+    with open(json_path, "w") as f:
         json.dump(output, f, indent=2)
-    print(f"Results saved: benchmark_results.json ({len(results)}/{len(RUNTIMES)} runtimes)")
+    print(f"Results saved: {json_path} ({len(results)}/{len(RUNTIMES)} runtimes)")
 
     # グラフ生成
     print("グラフを生成中...")
