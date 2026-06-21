@@ -1,39 +1,39 @@
 {
-  "timestamp": "2026-06-21T17:57:32.011714+00:00",
+  "timestamp": "2026-06-21T18:06:17.260494+00:00",
   "results": {
     "Python": {
-      "init_duration_ms": 385.0,
-      "invocation_duration_ms": 126.1,
+      "init_duration_ms": 466.8,
+      "invocation_duration_ms": 128.0,
       "max_memory_used_mb": 99
     },
     "Node.js": {
-      "init_duration_ms": 275.3,
-      "invocation_duration_ms": 465.7,
-      "max_memory_used_mb": 98
+      "init_duration_ms": 271.1,
+      "invocation_duration_ms": 448.0,
+      "max_memory_used_mb": 99
     },
     "Ruby": {
-      "init_duration_ms": 542.2,
-      "invocation_duration_ms": 156.1,
+      "init_duration_ms": 517.8,
+      "invocation_duration_ms": 130.6,
       "max_memory_used_mb": 81
     },
     "Java": {
-      "init_duration_ms": 1410.1,
-      "invocation_duration_ms": 5908.8,
+      "init_duration_ms": 1375.7,
+      "invocation_duration_ms": 6019.5,
       "max_memory_used_mb": 160
     },
     ".NET": {
-      "init_duration_ms": 272.5,
-      "invocation_duration_ms": 4827.4,
-      "max_memory_used_mb": 115
+      "init_duration_ms": 672.1,
+      "invocation_duration_ms": 4124.7,
+      "max_memory_used_mb": 114
     },
     "Go": {
-      "init_duration_ms": 65.3,
-      "invocation_duration_ms": 507.4,
+      "init_duration_ms": 68.1,
+      "invocation_duration_ms": 599.4,
       "max_memory_used_mb": 31
     },
     "Rust": {
-      "init_duration_ms": 88.1,
-      "invocation_duration_ms": 363.5,
+      "init_duration_ms": 113.4,
+      "invocation_duration_ms": 429.2,
       "max_memory_used_mb": 30
     }
   }
