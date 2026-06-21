@@ -1,19 +1,26 @@
 require 'json'
+require 'securerandom'
 require 'aws-sdk-dynamodb'
 
- $client = Aws::DynamoDB::Client.new
+# コールドスタートの初期化コストを計測するため、クライアントとテーブル名は
+# ハンドラ外（グローバルスコープ）で一度だけ初期化する。
+CLIENT = Aws::DynamoDB::Client.new
+TABLE_NAME = ENV.fetch('TABLE_NAME')
 
-def create(event:,context:)
-  body = event["body"]
-  book =JSON.parse(body)
-  id = SecureRandom.uuid
-  book["id"]=id
- 
-  table_item = {
-    table_name: "book",
-    item: book
+def create(event:, context:)
+  data = JSON.parse(event['body'])
+
+  book = {
+    'id' => SecureRandom.uuid,
+    'name' => data['name'],
+    'author' => data['author']
   }
-  $client.put_item(table_item)
-  { statusCode: 201, body: JSON.generate(book) }
 
+  CLIENT.put_item(table_name: TABLE_NAME, item: book)
+
+  {
+    statusCode: 201,
+    headers: { 'Content-Type' => 'application/json' },
+    body: JSON.generate(book)
+  }
 end

@@ -9,6 +9,11 @@ Globals:
     Architectures:
       - arm64
     Tracing: Active
+    # 全ランタイムへ DynamoDB テーブル名を環境変数で一括注入する（公平な対照実験）。
+    # !Ref BooksTable はテーブル名 (book) を返す。各 Lambda はこれをハンドラ外で読む。
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref BooksTable
 
 Resources:
   PythonFunction:
@@ -48,7 +53,7 @@ Resources:
     Properties:
       CodeUri: ruby-lambda/
       Handler: app.create
-      Runtime: ruby3.4
+      Runtime: ruby4.0
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref BooksTable

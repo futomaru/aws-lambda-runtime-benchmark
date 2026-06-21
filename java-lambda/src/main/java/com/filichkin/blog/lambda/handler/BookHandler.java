@@ -4,6 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.filichkin.blog.lambda.model.Book;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -12,21 +14,30 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import java.util.Map;
 import java.util.UUID;
 
+// 標準 JVM（GraalVM Native Image 非使用）でのコールドスタートを計測する。
+// JIT ウォームアップの影響を受けるため、JVM 系言語は初回実行が相対的に遅い点に注意。
 public class BookHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final DynamoDbClient dynamoDb = DynamoDbClient.create();
-    private static final String TABLE_NAME = "book";
+    // コールドスタートの初期化コストを計測するため、クライアント・ObjectMapper・
+    // テーブル名はハンドラ外（static）で一度だけ初期化する。
+    private static final DynamoDbClient DYNAMO_DB = DynamoDbClient.create();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String TABLE_NAME = System.getenv("TABLE_NAME");
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
-        String body = event.getBody();
-        String name = extractField(body, "name");
-        String author = extractField(body, "author");
-        String id = UUID.randomUUID().toString();
+        Book book;
+        try {
+            JsonNode node = MAPPER.readTree(event.getBody());
+            book = new Book(
+                    UUID.randomUUID().toString(),
+                    node.get("name").asText(),
+                    node.get("author").asText());
+        } catch (Exception e) {
+            return new APIGatewayProxyResponseEvent().withStatusCode(400);
+        }
 
-        var book = new Book(id, name, author);
-
-        dynamoDb.putItem(PutItemRequest.builder()
+        DYNAMO_DB.putItem(PutItemRequest.builder()
                 .tableName(TABLE_NAME)
                 .item(Map.of(
                         "id", AttributeValue.builder().s(book.id()).build(),
@@ -35,19 +46,13 @@ public class BookHandler implements RequestHandler<APIGatewayProxyRequestEvent, 
                 ))
                 .build());
 
-        String json = """
-                {"id":"%s","name":"%s","author":"%s"}""".formatted(book.id(), book.name(), book.author());
-
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(201)
-                .withBody(json);
-    }
-
-    private String extractField(String json, String field) {
-        String key = "\"" + field + "\"";
-        int idx = json.indexOf(key);
-        int start = json.indexOf("\"", idx + key.length() + 1) + 1;
-        int end = json.indexOf("\"", start);
-        return json.substring(start, end);
+        try {
+            return new APIGatewayProxyResponseEvent()
+                    .withStatusCode(201)
+                    .withHeaders(Map.of("Content-Type", "application/json"))
+                    .withBody(MAPPER.writeValueAsString(book));
+        } catch (Exception e) {
+            return new APIGatewayProxyResponseEvent().withStatusCode(500);
+        }
     }
 }

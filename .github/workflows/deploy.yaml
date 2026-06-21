@@ -38,7 +38,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.4'
+          ruby-version: '4.0'
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -51,7 +51,9 @@ jobs:
           go-version: '1.26'
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.96.0'
 
       - name: Install cargo-lambda
         run: pip install cargo-lambda
