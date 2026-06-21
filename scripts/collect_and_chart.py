@@ -26,7 +26,7 @@ RUNTIMES = {
 }
 
 
-def get_function_names():
+def get_function_names() -> dict[str, str]:
     """CloudFormation スタックから実際の Lambda 関数名を取得する。"""
     cfn = boto3.client("cloudformation")
     function_names = {}
@@ -40,7 +40,7 @@ def get_function_names():
     return function_names
 
 
-def get_cloudwatch_metrics(function_names):
+def get_cloudwatch_metrics(function_names: dict[str, str]) -> dict[str, dict[str, float]]:
     """CloudWatch Logs の REPORT 行から Init Duration と Duration を取得する。"""
     logs = boto3.client("logs")
     end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
@@ -89,7 +89,7 @@ def get_cloudwatch_metrics(function_names):
     return results
 
 
-def generate_chart(results):
+def generate_chart(results: dict[str, dict[str, float]]) -> None:
     """横棒積み上げグラフを生成して benchmark_results.png に保存する。"""
     # 合計時間の昇順（速い順が上）でソート
     sorted_runtimes = sorted(
@@ -166,7 +166,7 @@ def generate_chart(results):
     print(f"Chart saved: {chart_path}")
 
 
-def generate_memory_chart(results):
+def generate_memory_chart(results: dict[str, dict[str, float]]) -> None:
     """横棒グラフを生成して benchmark_memory.png に保存する。"""
     MEMORY_SIZE_MB = 256
 
@@ -212,7 +212,7 @@ def generate_memory_chart(results):
     print(f"Memory chart saved: {chart_path}")
 
 
-def main():
+def main() -> None:
     print("Lambda 関数名を取得中...")
     function_names = get_function_names()
     for label, name in function_names.items():

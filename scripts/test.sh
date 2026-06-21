@@ -1,14 +1,13 @@
-#!/bin/sh
-set -e
+#!/usr/bin/env bash
+# bash 専用（プロセス置換 / read を使用）。
+set -euo pipefail
 
 STACK_NAME="aws-lambda-runtime-benchmark"
 LOGICAL_IDS="PythonFunction NodeJsFunction RubyFunction JavaFunction DotNetFunction GoFunction RustFunction"
 
-# get API endpoint
-API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query 'Stacks[0].Outputs[0].OutputValue')
-
-# remove quotes
-API_ENDPOINT=$(sed -e 's/^"//' -e 's/"$//' <<< "$API_ENDPOINT")
+# get API endpoint (--output text で引用符なしの生値を取得)
+API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+  --query 'Stacks[0].Outputs[0].OutputValue' --output text)
 
 # Force cold start: update environment variable to reset execution environments
 echo "===== Forcing cold start for all functions ====="
@@ -21,9 +20,11 @@ do
     --query 'StackResourceDetail.PhysicalResourceId' \
     --output text)
   echo "Updating $logical_id ($func_name)..."
+  # --environment は環境変数マップを丸ごと置換するため、TABLE_NAME=book を必ず保持する。
+  # （省略すると TABLE_NAME が消え、全関数が実行時に失敗する）
   aws lambda update-function-configuration \
     --function-name "$func_name" \
-    --environment "Variables={BENCHMARK_TS=$BENCHMARK_TS}" \
+    --environment "Variables={TABLE_NAME=book,BENCHMARK_TS=$BENCHMARK_TS}" \
     --no-cli-pager > /dev/null
 done
 
@@ -40,14 +41,34 @@ do
 done
 echo "All functions updated. Cold start will be triggered on next invocation."
 
+# Send a request to each runtime and validate the response
+RESP_BODY="$(mktemp)"
+trap 'rm -f "$RESP_BODY"' EXIT
+failed=0
 for runtime in python node ruby java dotnet go rust
 do
   echo "------------- $runtime:"
-  curl -X POST --fail -w '\nTotal: %{time_total}s\n' --location "$API_ENDPOINT/$runtime/book" \
-      -H "accept: application/json" \
-      -H "content-type: application/json" \
-      -d "{
-            \"name\": \"Sotnikov\",
-            \"author\": \"Vasil Baykoav\"
-          }"
+  # curl の -w 出力（HTTPコード + 所要時間）を取得。本文は $RESP_BODY に保存。
+  # 注意: -w は末尾改行を出さないため `read < <(...)` を使うと、変数は埋まっても
+  # read が EOF で終了コード1を返し、set -e 下で異常終了する。コマンド置換 + ||true で受ける。
+  metrics="$(curl -s -o "$RESP_BODY" \
+    -w '%{http_code} %{time_total}' \
+    -X POST --location "$API_ENDPOINT/$runtime/book" \
+    -H "accept: application/json" \
+    -H "content-type: application/json" \
+    -d '{"name":"Sotnikov","author":"Vasil Baykoav"}')" || true
+  http_code="${metrics%% *}"
+  time_total="${metrics##* }"
+  body="$(cat "$RESP_BODY")"
+  echo "  HTTP ${http_code:-000} | Total: ${time_total:-?}s | $body"
+  if [ "$http_code" != "201" ] || ! grep -q '"id"' "$RESP_BODY"; then
+    echo "  ERROR: $runtime did not return a valid 201 response with an id"
+    failed=1
+  fi
 done
+
+if [ "$failed" -ne 0 ]; then
+  echo "===== One or more runtimes failed validation ====="
+  exit 1
+fi
+echo "===== All runtimes returned a valid 201 response ====="

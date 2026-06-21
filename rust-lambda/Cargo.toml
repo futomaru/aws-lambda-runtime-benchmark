@@ -1,11 +1,13 @@
 [package]
 name = "rust-lambda"
 version = "0.2.0"
-edition = "2021"
+# Rust 1.96.0（2026-05）で安定の edition 2024 を使用。
+edition = "2024"
 
+# バージョンは caret 指定でツールチェーンが互換最新へ解決する。
 [dependencies]
-aws-config = "1.5"
-aws-sdk-dynamodb = "1.54"
+aws-config = "1"
+aws-sdk-dynamodb = "1"
 lambda_http = "0.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

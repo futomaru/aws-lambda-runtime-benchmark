@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" role="img"
+     aria-label="Architecture: Client to API Gateway to seven Lambda runtimes to DynamoDB"
+     font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <!--
+    TODO: replace the colored placeholder boxes with the official AWS architecture
+    icons (API Gateway / Lambda / DynamoDB) from https://aws.amazon.com/architecture/icons/
+    e.g. <image href="..." width="48" height="48"/>. Currently using AWS brand-color
+    boxes as a self-contained, offline-friendly fallback.
+  -->
+  <style>
+    .bg     { fill: #ffffff; }
+    .title  { fill: #16191f; font-size: 20px; font-weight: 700; }
+    .label  { fill: #ffffff; font-size: 13px; font-weight: 700; }
+    .sub    { fill: #ffffff; font-size: 10px; opacity: 0.85; }
+    .edge   { fill: #16191f; font-size: 10px; }
+    .flow   { stroke: #687078; stroke-width: 1.5; fill: none; }
+    .client { fill: #5a6b7b; }
+    .apigw  { fill: #cc2264; }   /* App Integration (API Gateway) */
+    .lambda { fill: #ed7100; }   /* Compute (Lambda) */
+    .ddb    { fill: #4d72f3; }   /* Database (DynamoDB) */
+    .arrow  { fill: #687078; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0f1419; }
+      .title { fill: #e9edf2; }
+      .edge  { fill: #c2c9d1; }
+      .flow  { stroke: #8b949e; }
+      .arrow { fill: #8b949e; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="900" height="500"/>
+  <text class="title" x="450" y="34" text-anchor="middle">AWS Lambda Runtime Benchmark — Architecture (ARM64 / 256 MB)</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="arrow" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+  </defs>
+
+  <!-- Client -->
+  <rect class="client" x="30" y="216" width="120" height="68" rx="8"/>
+  <text class="label" x="90" y="246" text-anchor="middle">Client</text>
+  <text class="sub"   x="90" y="264" text-anchor="middle">curl / browser</text>
+
+  <!-- API Gateway -->
+  <rect class="apigw" x="210" y="205" width="150" height="90" rx="8"/>
+  <text class="label" x="285" y="245" text-anchor="middle">Amazon API Gateway</text>
+  <text class="sub"   x="285" y="263" text-anchor="middle">REST API</text>
+
+  <!-- DynamoDB -->
+  <rect class="ddb" x="720" y="200" width="150" height="100" rx="8"/>
+  <text class="label" x="795" y="246" text-anchor="middle">Amazon DynamoDB</text>
+  <text class="sub"   x="795" y="264" text-anchor="middle">Table: book</text>
+
+  <!-- Lambda functions (7 runtimes) -->
+  <g>
+    <rect class="lambda" x="460" y="40"  width="170" height="44" rx="6"/>
+    <text class="label" x="545" y="67"  text-anchor="middle">AWS Lambda · Python</text>
+    <rect class="lambda" x="460" y="98"  width="170" height="44" rx="6"/>
+    <text class="label" x="545" y="125" text-anchor="middle">AWS Lambda · Node.js</text>
+    <rect class="lambda" x="460" y="156" width="170" height="44" rx="6"/>
+    <text class="label" x="545" y="183" text-anchor="middle">AWS Lambda · Ruby</text>
+    <rect class="lambda" x="460" y="214" width="170" height="44" rx="6"/>
+    <text class="label" x="545" y="241" text-anchor="middle">AWS Lambda · Java</text>
+    <rect class="lambda" x="460" y="272" width="170" height="44" rx="6"/>
+    <text class="label" x="545" y="299" text-anchor="middle">AWS Lambda · .NET</text>
+    <rect class="lambda" x="460" y="330" width="170" height="44" rx="6"/>
+    <text class="label" x="545" y="357" text-anchor="middle">AWS Lambda · Go</text>
+    <rect class="lambda" x="460" y="388" width="170" height="44" rx="6"/>
+    <text class="label" x="545" y="415" text-anchor="middle">AWS Lambda · Rust</text>
+  </g>
+
+  <!-- Client -> API Gateway -->
+  <path class="flow" marker-end="url(#arrow)" d="M150,250 L206,250"/>
+  <text class="edge" x="178" y="242" text-anchor="middle">POST</text>
+
+  <!-- API Gateway -> each Lambda -->
+  <path class="flow" marker-end="url(#arrow)" d="M360,250 C410,250 410,62  456,62"/>
+  <path class="flow" marker-end="url(#arrow)" d="M360,250 C410,250 410,120 456,120"/>
+  <path class="flow" marker-end="url(#arrow)" d="M360,250 C410,250 410,178 456,178"/>
+  <path class="flow" marker-end="url(#arrow)" d="M360,250 L456,236"/>
+  <path class="flow" marker-end="url(#arrow)" d="M360,250 C410,250 410,294 456,294"/>
+  <path class="flow" marker-end="url(#arrow)" d="M360,250 C410,250 410,352 456,352"/>
+  <path class="flow" marker-end="url(#arrow)" d="M360,250 C410,250 410,410 456,410"/>
+  <text class="edge" x="408" y="20" text-anchor="middle">/{runtime}/book</text>
+
+  <!-- each Lambda -> DynamoDB -->
+  <path class="flow" marker-end="url(#arrow)" d="M630,62  C680,62  680,250 716,250"/>
+  <path class="flow" marker-end="url(#arrow)" d="M630,120 C680,120 680,250 716,250"/>
+  <path class="flow" marker-end="url(#arrow)" d="M630,178 C680,178 680,250 716,250"/>
+  <path class="flow" marker-end="url(#arrow)" d="M630,236 L716,250"/>
+  <path class="flow" marker-end="url(#arrow)" d="M630,294 C680,294 680,250 716,250"/>
+  <path class="flow" marker-end="url(#arrow)" d="M630,352 C680,352 680,250 716,250"/>
+  <path class="flow" marker-end="url(#arrow)" d="M630,410 C680,410 680,250 716,250"/>
+  <text class="edge" x="675" y="475" text-anchor="middle">PutItem {id, name, author}</text>
+</svg>

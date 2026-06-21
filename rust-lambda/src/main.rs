@@ -18,17 +18,21 @@ async fn main() -> Result<(), Error> {
         .with_max_level(tracing::Level::INFO)
         .init();
 
+    // コールドスタートの初期化コストを計測するため、クライアントとテーブル名は
+    // main()（ハンドラ外）で一度だけ初期化する。
     let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
     let client = Client::new(&config);
+    let table_name = std::env::var("TABLE_NAME")?;
 
     run(service_fn(|event: Request| {
         let client = client.clone();
-        async move { handle_request(event, &client).await }
+        let table_name = table_name.clone();
+        async move { handle_request(event, &client, &table_name).await }
     }))
     .await
 }
 
-async fn handle_request(event: Request, client: &Client) -> Result<Response<Body>, Error> {
+async fn handle_request(event: Request, client: &Client, table_name: &str) -> Result<Response<Body>, Error> {
     let body = match event.body() {
         Body::Text(text) => text.clone(),
         _ => {
@@ -44,7 +48,7 @@ async fn handle_request(event: Request, client: &Client) -> Result<Response<Body
 
     client
         .put_item()
-        .table_name("book")
+        .table_name(table_name)
         .item("id", AttributeValue::S(id))
         .item("name", AttributeValue::S(book.name.clone()))
         .item("author", AttributeValue::S(book.author.clone()))
@@ -52,5 +56,8 @@ async fn handle_request(event: Request, client: &Client) -> Result<Response<Body
         .await?;
 
     let json = serde_json::to_string(&book)?;
-    Ok(Response::builder().status(201).body(json.into())?)
+    Ok(Response::builder()
+        .status(201)
+        .header("content-type", "application/json")
+        .body(json.into())?)
 }
