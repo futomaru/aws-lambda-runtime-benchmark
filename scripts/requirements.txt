@@ -1,3 +1,5 @@
 # 再現性のためバージョンを固定する。
+# matplotlib は 3.10.0 だと Python 3.14 で Path.__deepcopy__ が再帰爆発し
+# グラフ描画が RecursionError になるため、3.14 対応の 3.11.0 を使う。
 boto3==1.40.0
-matplotlib==3.10.0
+matplotlib==3.11.0
