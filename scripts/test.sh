@@ -48,14 +48,19 @@ failed=0
 for runtime in python node ruby java dotnet go rust
 do
   echo "------------- $runtime:"
-  read -r http_code time_total < <(curl -s -o "$RESP_BODY" \
+  # curl の -w 出力（HTTPコード + 所要時間）を取得。本文は $RESP_BODY に保存。
+  # 注意: -w は末尾改行を出さないため `read < <(...)` を使うと、変数は埋まっても
+  # read が EOF で終了コード1を返し、set -e 下で異常終了する。コマンド置換 + ||true で受ける。
+  metrics="$(curl -s -o "$RESP_BODY" \
     -w '%{http_code} %{time_total}' \
     -X POST --location "$API_ENDPOINT/$runtime/book" \
     -H "accept: application/json" \
     -H "content-type: application/json" \
-    -d '{"name":"Sotnikov","author":"Vasil Baykoav"}')
+    -d '{"name":"Sotnikov","author":"Vasil Baykoav"}')" || true
+  http_code="${metrics%% *}"
+  time_total="${metrics##* }"
   body="$(cat "$RESP_BODY")"
-  echo "  HTTP $http_code | Total: ${time_total}s | $body"
+  echo "  HTTP ${http_code:-000} | Total: ${time_total:-?}s | $body"
   if [ "$http_code" != "201" ] || ! grep -q '"id"' "$RESP_BODY"; then
     echo "  ERROR: $runtime did not return a valid 201 response with an id"
     failed=1
